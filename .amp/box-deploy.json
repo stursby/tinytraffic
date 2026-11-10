@@ -2,7 +2,8 @@
   "targets": {
     "default": {
       "on": "stursby/analytics",
-      "name": "tinytraffic"
+      "name": "tinytraffic",
+      "domain": "pulse.stursby.com"
     }
   }
 }
