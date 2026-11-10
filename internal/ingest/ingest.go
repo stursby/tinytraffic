@@ -195,7 +195,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // server is configured to sit behind a trusted proxy.
 func ClientIP(r *http.Request, trustProxy bool) netip.Addr {
 	if trustProxy {
-		for _, hdr := range []string{"CF-Connecting-IP", "X-Real-IP", "X-Forwarded-For"} {
+		// X-Client-IP comes first: Amp Boxes set it to the real client IP but pass
+		// a visitor's own CF-Connecting-IP through unchanged.
+		for _, hdr := range []string{"X-Client-IP", "CF-Connecting-IP", "X-Real-IP", "X-Forwarded-For"} {
 			v := r.Header.Get(hdr)
 			if v == "" {
 				continue

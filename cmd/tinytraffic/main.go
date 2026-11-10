@@ -103,7 +103,7 @@ func serve(args []string) error {
 	geoPath := fs.String("geoip", env("TT_GEOIP_DB", ""), "comma-separated .mmdb files (default: DATA/geo.mmdb, else the npm DB-IP package in ./node_modules)")
 	memoryLimit := fs.String("memory-limit", env("TT_MEMORY_LIMIT", "1GB"), "DuckDB memory limit, e.g. 512MB or 2GB")
 	clickHouse := clickHouseFlag(fs)
-	trustProxy := fs.Bool("trust-proxy", env("TT_TRUST_PROXY", "") == "true", "read client IPs from X-Forwarded-For / CF-Connecting-IP")
+	trustProxy := fs.Bool("trust-proxy", env("TT_TRUST_PROXY", "") == "true", "read client IPs from X-Client-IP / CF-Connecting-IP / X-Real-IP / X-Forwarded-For")
 	fs.Parse(args)
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))

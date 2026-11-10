@@ -91,7 +91,7 @@ To send events from a backend instead, see
 | `-memory-limit` | `TT_MEMORY_LIMIT` | `1GB` | DuckDB memory cap |
 | `-clickhouse` | `TT_CLICKHOUSE_URL` | | Use ClickHouse instead of DuckDB, see [ClickHouse](#clickhouse) |
 | `-geoip` | `TT_GEOIP_DB` | see below | Comma-separated `.mmdb` files (MaxMind or DB-IP format, country or city) |
-| `-trust-proxy` | `TT_TRUST_PROXY=true` | off | Read client IPs from `CF-Connecting-IP` / `X-Real-IP` / `X-Forwarded-For`. Enable only behind a reverse proxy |
+| `-trust-proxy` | `TT_TRUST_PROXY=true` | off | Read client IPs from `X-Client-IP` / `CF-Connecting-IP` / `X-Real-IP` / `X-Forwarded-For`. Enable only behind a reverse proxy |
 | | `TT_PASSWORD` | | Sets the password on first start, so nobody else can claim the setup screen |
 
 ### GeoIP

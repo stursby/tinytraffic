@@ -132,6 +132,21 @@ func TestTrustRequestForwardedIP(t *testing.T) {
 	}
 }
 
+// Behind a proxy that sets X-Client-IP (Amp Boxes), it wins over a
+// CF-Connecting-IP the visitor sent themselves.
+func TestClientIPPrefersXClientIP(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "127.0.0.1:1234"
+	req.Header.Set("CF-Connecting-IP", "7.7.7.7")
+	req.Header.Set("X-Client-IP", "198.51.100.1")
+	if got := ClientIP(req, true).String(); got != "198.51.100.1" {
+		t.Errorf("trusted: got %s, want 198.51.100.1", got)
+	}
+	if got := ClientIP(req, false).String(); got != "127.0.0.1" {
+		t.Errorf("untrusted: got %s, want 127.0.0.1", got)
+	}
+}
+
 // After a rename, snippets still sending the old domain keep recording, and
 // an event for both domains is recorded once.
 func TestRenamedSite(t *testing.T) {
