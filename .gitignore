@@ -12,3 +12,4 @@ apps/dashboard/.tanstack/
 apps/dashboard/.output/
 apps/dashboard/src/routeTree.gen.ts
 .DS_Store
+.amp/portals/*

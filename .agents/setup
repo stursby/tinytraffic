@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Prepares an Amp orb for tinytraffic: Go (cgo, for DuckDB), Bun, workspace
+# dependencies, and warm Go module and build caches. Safe to rerun.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# Matches go.mod and the golang:1.26 image in the Dockerfile.
+GO_VERSION=1.26.11
+# Matches the oven/bun:1.4 image in the Dockerfile.
+BUN_VERSION=1.4.4
+
+step() {
+  local name=$1 start=$SECONDS
+  shift
+  echo "==> $name"
+  "$@"
+  echo "    $name took $((SECONDS - start))s"
+}
+
+install_go() {
+  if [ "$(/usr/local/go/bin/go env GOVERSION 2>/dev/null)" = "go$GO_VERSION" ]; then
+    echo "    go$GO_VERSION already installed"
+  else
+    local arch
+    case "$(uname -m)" in
+      x86_64) arch=amd64 ;;
+      aarch64) arch=arm64 ;;
+      *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+    esac
+    local tmp
+    tmp=$(mktemp -d)
+    curl -fsSL "https://go.dev/dl/go$GO_VERSION.linux-$arch.tar.gz" -o "$tmp/go.tgz"
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf "$tmp/go.tgz"
+    rm -rf "$tmp"
+  fi
+  # /usr/local/bin is on PATH for Amp, login shells, and supervised services.
+  sudo ln -sf /usr/local/go/bin/go /usr/local/go/bin/gofmt /usr/local/bin/
+}
+
+install_bun() {
+  if [ "$(bun --version 2>/dev/null)" = "$BUN_VERSION" ]; then
+    echo "    bun $BUN_VERSION already installed"
+    return
+  fi
+  curl -fsSL https://bun.sh/install | bash -s "bun-v$BUN_VERSION"
+  sudo ln -sf "$HOME/.bun/bin/bun" /usr/local/bin/bun
+}
+
+# DuckDB is a C++ library, so the Go build needs a C/C++ toolchain (cgo).
+install_cc() {
+  if command -v gcc >/dev/null && command -v g++ >/dev/null; then
+    echo "    gcc and g++ present"
+    return
+  fi
+  sudo apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential
+}
+
+# Also fetches the GeoIP database the server reads from ./node_modules.
+bun_install() { bun install --frozen-lockfile; }
+
+go_deps() { go mod download; }
+
+# The dashboard build generates apps/dashboard/src/routeTree.gen.ts, which
+# `bun run typecheck` needs, and fills web/dist and web/static, which the Go
+# binary embeds. `bun dev` and `bun run build` refresh both later.
+web_build() {
+  if [ -f apps/dashboard/src/routeTree.gen.ts ] && [ -f web/dist/_shell.html ] && [ -f web/static/script.js ]; then
+    echo "    already built"
+    return
+  fi
+  bun run --filter tracker build
+  bun run --filter dashboard build
+}
+
+# Compile the server and test binaries once so the first `go build`, `go test`,
+# or `bun dev` in a thread reuses the cache instead of building DuckDB's cgo
+# bindings from scratch.
+go_warm() {
+  go build -o bin/tinytraffic ./cmd/tinytraffic
+  go test -count=1 -run '^$' ./... >/dev/null
+}
+
+# stursby/tinytraffic is a fork; track the original for `git fetch upstream`.
+add_upstream() {
+  git remote get-url upstream >/dev/null 2>&1 \
+    || git remote add upstream https://github.com/egoist/tinytraffic.git
+}
+
+step "Upstream remote" add_upstream
+step "Go $GO_VERSION" install_go
+step "Bun $BUN_VERSION" install_bun
+step "C toolchain" install_cc
+step "bun install" bun_install
+step "go mod download" go_deps
+step "Build tracker and dashboard" web_build
+step "Warm Go build cache" go_warm
