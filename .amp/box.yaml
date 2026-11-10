@@ -12,8 +12,10 @@ services:
   web:
     # The DuckDB file lives in AMP_DEPLOYMENT_DATA_DIRECTORY, which survives deploys.
     # A deploy restarts this one process, so only one process ever holds the DuckDB lock.
+    # The Box's edge sets X-Client-IP to the visitor's real IP, so trust it.
     command: >-
       TT_ADDR=:$PORT
+      TT_TRUST_PROXY=true
       TT_DATA_DIR=$AMP_DEPLOYMENT_DATA_DIRECTORY
       TT_GEOIP_DB=geoip/dbip-city-ipv4.mmdb,geoip/dbip-city-ipv6.mmdb
       exec bin/tinytraffic serve
