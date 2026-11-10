@@ -1,0 +1,19 @@
+# How tinytraffic runs on its Amp Box deployment (`amp boxes deploy`).
+# The build runs on the orb (Go with cgo for DuckDB, plus Bun) and ships only the
+# binary, which embeds the dashboard and tracker, and the DB-IP GeoIP database.
+build: >-
+  bun install --frozen-lockfile &&
+  VITE_GIT_COMMIT=$(git rev-parse HEAD) bun run build &&
+  mkdir -p geoip &&
+  cp -L node_modules/@ip-location-db/dbip-city-mmdb/*.mmdb node_modules/@ip-location-db/dbip-city-mmdb/DBIP-LICENSE geoip/
+source: false
+artifacts: [bin/tinytraffic, geoip]
+services:
+  web:
+    # The DuckDB file lives in AMP_DEPLOYMENT_DATA_DIRECTORY, which survives deploys.
+    # A deploy restarts this one process, so only one process ever holds the DuckDB lock.
+    command: >-
+      TT_ADDR=:$PORT
+      TT_DATA_DIR=$AMP_DEPLOYMENT_DATA_DIRECTORY
+      TT_GEOIP_DB=geoip/dbip-city-ipv4.mmdb,geoip/dbip-city-ipv6.mmdb
+      exec bin/tinytraffic serve
