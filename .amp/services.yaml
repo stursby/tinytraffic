@@ -1,0 +1,10 @@
+services:
+  dev:
+    # `bun dev` runs the tracker watcher, the Go server on :8080, and the Vite
+    # dashboard on :3000 (fixed with --strictPort in scripts/dev.ts). The first
+    # start seeds a demo site with 90 days of traffic into ./data.
+    command: '[ -f data/tinytraffic.duckdb ] || bun run demo; exec bun dev'
+    port: 3000
+    portal:
+      title: tinytraffic
+      description: Choose a dashboard password on first visit. The demo site is demo.tinytraffic.local.
